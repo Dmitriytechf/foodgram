@@ -9,6 +9,8 @@ __pycache__/
 
 # C extensions
 *.so
+dock.txt
+help.txt
 
 # Distribution / packaging
 .Python
