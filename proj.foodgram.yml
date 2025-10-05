@@ -2,7 +2,6 @@ name: Foodgram CI/CD
 
 on:
   push:
-    branches: [ main ]
 
 jobs:
   backend_tests:
@@ -109,7 +108,5 @@ jobs:
             sudo docker compose -f docker-compose.production.yml pull
             sudo docker compose -f docker-compose.production.yml down
             sudo docker compose -f docker-compose.production.yml up -d
-            # Ждем запуска БД
-            sleep 10
             sudo docker compose -f docker-compose.production.yml exec backend python manage.py makemigrations users
             sudo docker compose -f docker-compose.production.yml exec backend python manage.py migrate

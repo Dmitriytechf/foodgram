@@ -66,21 +66,29 @@ class RecipeViewSet(viewsets.ModelViewSet):
         self.perform_create(serializer)
 
         instance = serializer.instance
-        output_serializer = RecipeSerializer(instance, context={'request': request})
+        output_serializer = RecipeSerializer(instance,
+                                             context={'request': request})
 
         headers = self.get_success_headers(output_serializer.data)
-        return Response(output_serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+        return Response(output_serializer.data,
+                        status=status.HTTP_201_CREATED,
+                        headers=headers)
 
     def update(self, request, *args, **kwargs):
         """Переопределяем update"""
         partial = kwargs.pop('partial', False)
         instance = self.get_object()
 
-        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer = self.get_serializer(instance,
+                                         data=request.data,
+                                         partial=partial)
         serializer.is_valid(raise_exception=True)
         self.perform_update(serializer)
 
-        output_serializer = RecipeSerializer(instance, context={'request': request})
+        output_serializer = RecipeSerializer(
+            instance,
+            context={'request': request}
+        )
         return Response(output_serializer.data)
 
     @action(
@@ -177,7 +185,9 @@ class RecipeViewSet(viewsets.ModelViewSet):
 
         for idx, item in enumerate(ingredients, 1):
             shopping_list.append(
-                f"{idx:2d}. {item['name']:<25} {item['total_amount']:>5} {item['unit']}")
+                f"{idx:2d}. {item['name']:<25} "
+                + f"{item['total_amount']:>5} {item['unit']}"
+            )
 
         shopping_list.append("")
         shopping_list.append("-" * 50)
@@ -186,8 +196,11 @@ class RecipeViewSet(viewsets.ModelViewSet):
 
         file_content = "\n".join(shopping_list)
 
-        response = HttpResponse(file_content, content_type='text/plain; charset=utf-8')
-        response['Content-Disposition'] = 'attachment; filename="foodgram_shopping_list.txt"'
+        response = HttpResponse(file_content,
+                                content_type='text/plain; charset=utf-8')
+        response['Content-Disposition'] = (
+            'attachment; filename="foodgram_shopping_list.txt"'
+        )
 
         return response
 
