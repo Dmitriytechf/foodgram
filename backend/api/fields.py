@@ -16,7 +16,7 @@ class Base64ImageField(serializers.ImageField):
             ext = format.split('/')[-1]
 
             # Генерируем имя файла
-            filename = f"{uuid.uuid4()}.{ext}"
+            filename = f'{uuid.uuid4()}.{ext}'
 
             # Декодируем base64
             data = ContentFile(base64.b64decode(imgstr), name=filename)
