@@ -1,5 +1,6 @@
 import base64
 import uuid
+from collections import Counter
 
 from django.contrib.auth import get_user_model
 from django.core.files.base import ContentFile
@@ -7,9 +8,8 @@ from djoser.serializers import UserSerializer
 from rest_framework import serializers
 
 from recipes.constants import MIN_AMOUNT
-from recipes.models import (Ingredient, Tag, Recipe, IngredientAmount,
-                            Favorite, ShoppingCart)
-from users.models import Subscription
+from recipes.models import (Favorite, Ingredient, IngredientAmount, Recipe,
+                            ShoppingCart, Subscription, Tag)
 
 User = get_user_model()
 
@@ -85,27 +85,12 @@ class RecipeCreateUpdateSerializer(serializers.ModelSerializer):
 
     @staticmethod
     def find_duplicates(items, get_id_func=lambda x: x):
-        """
-        Находит дублирующиеся элементы
-        """
-        seen = set()
-        duplicates = set()
-
-        for item in items:
-            item_id = get_id_func(item)
-            if item_id in seen:
-                duplicates.add(item_id)
-            else:
-                seen.add(item_id)
-
-        return duplicates
-
-    @staticmethod
-    def get_duplicate_names(model_class, duplicate_ids):
-        """Получает названия дублирующихся элементов"""
-        return model_class.objects.filter(
-            id__in=duplicate_ids
-        ).values_list('name', flat=True)
+        """Находит дублирующиеся элементы"""
+        return {
+            item_id for item_id, count in Counter(
+                get_id_func(item) for item in items
+            ).items() if count > 1
+        }
 
     def validate_ingredients(self, ingredients_data):
         """Проверяем что ингредиенты не повторяются"""
@@ -113,10 +98,12 @@ class RecipeCreateUpdateSerializer(serializers.ModelSerializer):
                                           get_id_func=lambda x: x['id'])
 
         if duplicates:
-            duplicate_names = self.get_duplicate_names(Ingredient, duplicates)
+            duplicate_names = Ingredient.objects.filter(
+                id__in=duplicates
+            ).values_list('name', flat=True)
             raise serializers.ValidationError(
                 f'Продукты не должны повторяться. '
-                f'Дублируются: {", ".join(duplicate_names)}'
+                f'Дублируются: {duplicate_names}'
             )
 
         return ingredients_data
@@ -127,10 +114,12 @@ class RecipeCreateUpdateSerializer(serializers.ModelSerializer):
                                           get_id_func=lambda x: x.id)
 
         if duplicates:
-            duplicate_names = self.get_duplicate_names(Tag, duplicates)
+            duplicate_names = Tag.objects.filter(
+                id__in=duplicates
+            ).values_list('name', flat=True)
             raise serializers.ValidationError(
                 f'Теги не должны повторяться. '
-                f'Дублируются: {", ".join(duplicate_names)}'
+                f'Дублируются: {duplicate_names}'
             )
 
         return tags_data
@@ -164,7 +153,7 @@ class RecipeCreateUpdateSerializer(serializers.ModelSerializer):
         tags = validated_data.pop('tags', None)
 
         # Обновляем основные поля
-        instance.save().update(ingredients, validated_data)
+        instance = super().update(instance, validated_data)
 
         # Обновляем теги если переданы
         instance.tags.set(tags)
@@ -200,7 +189,7 @@ class RecipeSerializer(serializers.ModelSerializer):
             'is_favorited', 'is_in_shopping_cart',
             'name', 'image', 'text', 'cooking_time'
         )
-        read_only_fields = '__all__'
+        read_only_fields = fields
 
     def _check_relation(self, recipe, relation_model):
         """Общий метод для проверки связи пользователь-рецепт"""
@@ -226,7 +215,7 @@ class RecipeMinifiedSerializer(serializers.ModelSerializer):
     class Meta:
         model = Recipe
         fields = ('id', 'name', 'image', 'cooking_time')
-        read_only_fields = '__all__'
+        read_only_fields = fields
 
 
 class UserSerializer(UserSerializer):
@@ -240,7 +229,7 @@ class UserSerializer(UserSerializer):
             'first_name', 'last_name',
             'is_subscribed', 'avatar'
         )
-        read_only_fields = '__all__'
+        read_only_fields = fields
 
     def get_is_subscribed(self, is_subscribed):
         """Проверяет, подписан ли текущий пользователь на кого-то"""

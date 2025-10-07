@@ -4,11 +4,8 @@ from django.contrib.auth.admin import UserAdmin
 from django.db.models import Count
 from django.utils.safestring import mark_safe
 
-from users.models import Subscription
-
 from .models import (Favorite, Ingredient, IngredientAmount, Recipe,
-                     ShoppingCart, Tag)
-
+                     ShoppingCart, Subscription, Tag)
 
 User = get_user_model()
 
@@ -30,11 +27,10 @@ class IngredientAdmin(admin.ModelAdmin):
                                  distinct=True)
         )
 
-    @admin.display(description='В рецептах')
+    @admin.display(description='В рецептах', ordering='_recipes_count')
     def recipes_count(self, obj):
         """Количество рецептов с этим ингредиентом"""
         return obj._recipes_count
-    recipes_count.admin_order_field = '_recipes_count'
 
 
 @admin.register(Tag)
@@ -45,7 +41,7 @@ class TagAdmin(admin.ModelAdmin):
     search_fields = ('name', 'slug')
     ordering = ('name',)
 
-    @admin.display(description='Количество рецептов')
+    @admin.display(description='Рецептов')
     def get_recipes_count(self, obj):
         """Показывает количество рецептов с этим тегом"""
         return obj.recipes.count()
@@ -79,50 +75,24 @@ class RecipeAdmin(admin.ModelAdmin):
     ordering = ('-created_at',)
 
     @admin.display(description='В избранном')
-    def favorites_count(self, obj):
+    def favorites_count(self, favorite_count):
         """Количество добавлений в избранное"""
-        return obj.favorites.count()
+        return favorite_count.favorites.count()
 
-    @mark_safe
     @admin.display(description='Теги')
     def get_tags_html(self, obj):
         """Красивые теги"""
-        tags = obj.tags.all()
-        html_tags = []
-        for tag in tags:
-            html_tags.append(
-                f'<span style="background: #6c757d; color: white; '
-                f'padding: 2px 6px; border-radius: 10px; font-size: 11px;">'
-                f'{tag.name}</span>'
-            )
-        return ' '.join(html_tags)
-    get_tags_html.short_description = 'Теги'
-
-    @mark_safe
-    @admin.display(description='Изображения')
-    def get_image_html(self, obj):
-        """Миниатюра изображения"""
-        if obj.image:
-            return f'<img src="{obj.image.url}" style="height: 40px;">'
-        return '<span style="color: #999;">—</span>'
+        return mark_safe(' '.join(
+            f'<span style="background: #6c757d; color: white; '
+            f'padding: 2px 6px; border-radius: 10px; font-size: 11px;">'
+            f'{tag.name}</span>'
+            for tag in obj.tags.all()
+        ))
 
 
-@admin.register(Favorite)
-class FavoriteAdmin(admin.ModelAdmin):
-    """Админка избранного"""
-    list_display = ('id', 'user', 'recipe', 'recipe_author')
-    list_display_links = ('user', 'recipe')
-    search_fields = ('user__email', 'user__username', 'recipe__name')
-
-    @admin.display(description='Автор рецепта')
-    def recipe_author(self, obj):
-        return obj.recipe.author
-    recipe_author.short_description = 'Автор рецепта'
-
-
-@admin.register(ShoppingCart)
-class ShoppingCartAdmin(admin.ModelAdmin):
-    """Админка списка покупок"""
+@admin.register(Favorite, ShoppingCart)
+class UserRecipeAdmin(admin.ModelAdmin):
+    """Админка для избранного и списка покупок"""
     list_display = ('id', 'user', 'recipe', 'recipe_author')
     list_display_links = ('user', 'recipe')
     search_fields = ('user__email', 'user__username', 'recipe__name')
@@ -153,11 +123,10 @@ class UserAdmin(UserAdmin):
     search_fields = ('username', 'email', 'first_name', 'last_name')
     ordering = ('username',)
 
-    def get_full_name(self, obj):
+    @admin.display(description='ФИО')
+    def get_full_name(self, full_name):
         """ФИО = имя + фамилия"""
-        full_name = f"{obj.first_name or ''} {obj.last_name or ''}".strip()
-        return full_name if full_name else '—'
-    get_full_name.short_description = 'ФИО'
+        return f"{full_name.first_name} {full_name.last_name}".strip() or '—'
 
     @mark_safe
     @admin.display(description='Аватар')
@@ -168,7 +137,6 @@ class UserAdmin(UserAdmin):
                 f'<img src="{obj.avatar.url}" style="max-height: 50px; '
                 f'max-width: 50px; border-radius: 50%; object-fit: cover;" />'
             )
-        return '<span style="color: #999;">—</span>'
 
     @admin.display(description='Рецепты')
     def recipes_count(self, obj):

@@ -7,6 +7,7 @@ from django.core.files.base import ContentFile
 from django.db.models import F, Sum
 from django.http import FileResponse
 from django.shortcuts import get_object_or_404
+from django.urls import reverse
 from django_filters.rest_framework import DjangoFilterBackend
 from djoser.views import UserViewSet
 from rest_framework import filters, serializers, status, viewsets
@@ -15,15 +16,14 @@ from rest_framework.parsers import JSONParser, MultiPartParser
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 
-from recipes.models import (Ingredient, Tag, Recipe, IngredientAmount,
-                            Favorite, ShoppingCart)
-from users.models import Profile, Subscription
+from recipes.models import (Favorite, Ingredient, IngredientAmount, Recipe,
+                            ShoppingCart, Subscription, Tag)
 
 from .permission import IsAuthorOrReadOnly
-from .serializers import (TagSerializer, IngredientSerializer,
-                          RecipeCreateUpdateSerializer, RecipeSerializer,
-                          UserWithRecipesSerializer, )
-
+from .serializers import (IngredientSerializer, RecipeCreateUpdateSerializer,
+                          RecipeSerializer, TagSerializer,
+                          UserWithRecipesSerializer)
+from .shopping_list_utils import generate_shopping_list_content
 
 User = get_user_model()
 
@@ -106,13 +106,17 @@ class RecipeViewSet(viewsets.ModelViewSet):
         # POST метод
         recipe = self.get_object()
 
-        if model_class.objects.filter(
+        obj, created = model_class.objects.get_or_create(
             user=request.user,
             recipe=recipe
-        ).exists():
-            raise serializers.ValidationError(error_message)
+        )
 
-        model_class.objects.create(user=request.user, recipe=recipe)
+        if not created:
+            raise serializers.ValidationError(
+                f'Рецепт "{recipe.name}" уже добавлен в '
+                f'{model_class._meta.verbose_name}'
+            )
+
         serializer = RecipeSerializer(recipe, context={'request': request})
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
@@ -124,7 +128,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
     def favorite(self, request, pk=None):
         """Добавление/удаление рецепта в избранное"""
         return self._handle_recipe_action(
-            request, pk, Favorite, 'Рецепт уже в избранном'
+            request, pk, Favorite
         )
 
     @action(
@@ -154,28 +158,17 @@ class RecipeViewSet(viewsets.ModelViewSet):
             total_amount=Sum('amount')
         ).order_by('name')
 
-        shopping_list = []
-        shopping_list.append("Foodgram - Список покупок")
-        shopping_list.append("-" * 50)
-        shopping_list.append("")
+        recipes = Recipe.objects.filter(
+            shopping_cart__user=request.user
+        ).values(
+            'name',
+            'author__username'
+        ).distinct().order_by('name')
 
-        for idx, item in enumerate(ingredients, 1):
-            shopping_list.append(
-                f"{idx:2d}. {item['name']:<25} "
-                + f"{item['total_amount']:>5} {item['unit']}"
-            )
-
-        shopping_list.append("")
-        shopping_list.append("-" * 50)
-        shopping_list.append(f"Всего ингредиентов: {len(ingredients)}")
-        shopping_list.append("-" * 50)
-
-        file_content = "\n".join(shopping_list)
-
-        buffer = io.BytesIO(file_content.encode('utf-8'))
+        file_content = generate_shopping_list_content(ingredients, recipes)
 
         return FileResponse(
-            buffer,
+            io.BytesIO(file_content.encode('utf-8')),
             as_attachment=True,
             filename='foodgram_shopping_list.txt'
         )
@@ -188,12 +181,15 @@ class RecipeViewSet(viewsets.ModelViewSet):
     )
     def get_link(self, request, pk=None):
         """Короткая ссылка на рецепт"""
-        recipe = self.get_object()
-        short_link = f"https://foodgram.example.org/recipes/{recipe.id}/"
-        return Response({'short-link': short_link})
+        get_object_or_404(Recipe, id=pk)
+        return Response({
+            'short-link': request.build_absolute_uri(
+                reverse('recipes:recipe-short-link', kwargs={'pk': pk})
+            )
+        })
 
 
-class UserViewSet(UserViewSet):
+class UserFoodgramViewSet(UserViewSet):
     """Кастомный вьюсет пользователя с дополнительными полями"""
 
     @action(
@@ -205,7 +201,7 @@ class UserViewSet(UserViewSet):
         """Список моих подписок"""
         user = request.user
         subscriptions = User.objects.filter(
-            following__user=user).order_by('-following__created_at')
+            following__user=user)
 
         # Пагинация
         page = self.paginate_queryset(subscriptions)
@@ -228,7 +224,7 @@ class UserViewSet(UserViewSet):
             subscription = get_object_or_404(
                 Subscription,
                 user=user,
-                author_id=id  # используем id вместо объекта author
+                author_id=id
             )
             subscription.delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
@@ -238,6 +234,11 @@ class UserViewSet(UserViewSet):
         if user == author:
             raise serializers.ValidationError(
                 'Нельзя подписаться на самого себя')
+
+        if Subscription.objects.filter(user=user, author=author).exists():
+            raise serializers.ValidationError(
+                'Вы уже подписаны на этого пользователя'
+            )
 
         Subscription.objects.create(user=user, author=author)
         serializer = UserWithRecipesSerializer(
@@ -251,8 +252,7 @@ class UserViewSet(UserViewSet):
         permission_classes=[IsAuthenticated]
     )
     def me(self, request, *args, **kwargs):
-        self.get_object = lambda: request.user
-        return self.retrieve(request, *args, **kwargs)
+        return super().me(request, *args, **kwargs)
 
     @action(
         methods=['put', 'delete'],
@@ -295,14 +295,10 @@ class UserViewSet(UserViewSet):
                     status=status.HTTP_400_BAD_REQUEST
                 )
 
-            if not hasattr(user, 'profile'):
-                Profile.objects.create(user=user)
-                user.refresh_from_db()
+            user.avatar = avatar_file
+            user.save()
 
-            user.profile.avatar = avatar_file
-            user.profile.save()
-
-            avatar_url = request.build_absolute_uri(user.profile.avatar.url)
+            avatar_url = request.build_absolute_uri(user.avatar.url)
 
             return Response(
                 {'avatar': avatar_url},
@@ -310,6 +306,6 @@ class UserViewSet(UserViewSet):
             )
 
         elif request.method == 'DELETE':
-            if hasattr(user, 'profile') and user.profile.avatar:
-                user.profile.avatar.delete(save=True)
+            if user.avatar:
+                user.avatar.delete(save=True)
             return Response(status=status.HTTP_204_NO_CONTENT)

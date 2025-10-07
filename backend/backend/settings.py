@@ -12,6 +12,7 @@ SECRET_KEY = os.getenv('SECRET_KEY', '')
 DEBUG = os.getenv('DEBUG', 'False').lower() == 'true'
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '').split(',')
 
+AUTH_USER_MODEL = 'recipes.User'
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -27,7 +28,6 @@ INSTALLED_APPS = [
     # 'corsheaders',
     # Мои приложения
     'api',
-    'users',
     'recipes'
 ]
 
