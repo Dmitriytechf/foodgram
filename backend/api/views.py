@@ -1,5 +1,4 @@
 import base64
-import io
 import uuid
 
 from django.contrib.auth import get_user_model
@@ -8,22 +7,23 @@ from django.db.models import F, Sum
 from django.http import FileResponse
 from django.shortcuts import get_object_or_404
 from django.urls import reverse
-from django_filters.rest_framework import DjangoFilterBackend
+from django_filters.rest_framework import DjangoFilterBackend, FilterSet
 from djoser.views import UserViewSet
 from rest_framework import filters, serializers, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.parsers import JSONParser, MultiPartParser
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
+from django.http import Http404
 
 from recipes.models import (Favorite, Ingredient, IngredientAmount, Recipe,
                             ShoppingCart, Subscription, Tag)
-
 from .permission import IsAuthorOrReadOnly
 from .serializers import (IngredientSerializer, RecipeCreateUpdateSerializer,
                           RecipeSerializer, TagSerializer,
                           UserWithRecipesSerializer)
 from .shopping_list_utils import generate_shopping_list_content
+
 
 User = get_user_model()
 
@@ -50,31 +50,15 @@ class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
     search_fields = ('^name',)
 
 
-class RecipeFilter:
+class RecipeFilter(FilterSet):
     """Фильтр для рецептов"""
-    @staticmethod
-    def filter_recipes(queryset, request):
-        # Фильтрация по автору
-        author_id = request.query_params.get('author')
-        if author_id:
-            queryset = queryset.filter(author_id=author_id)
 
-        # Фильтрация по избранному
-        is_favorited = request.query_params.get('is_favorited')
-        if is_favorited == '1' and request.user.is_authenticated:
-            queryset = queryset.filter(favorites__user=request.user)
-
-        # Фильтрация по списку покупок
-        is_in_shopping_cart = request.query_params.get('is_in_shopping_cart')
-        if is_in_shopping_cart == '1' and request.user.is_authenticated:
-            queryset = queryset.filter(shopping_cart__user=request.user)
-
-        # Фильтрация по тегам
-        tags = request.query_params.getlist('tags')
-        if tags:
-            queryset = queryset.filter(tags__slug__in=tags).distinct()
-
-        return queryset
+    class Meta:
+        model = Recipe
+        fields = {
+            'author': ['exact'],
+            'tags__slug': ['in'],
+        }
 
 
 class RecipeViewSet(viewsets.ModelViewSet):
@@ -92,7 +76,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
         """Автоматически устанавливаем автора при создании"""
         serializer.save(author=self.request.user)
 
-    def _handle_recipe_action(self, request, pk, model_class, error_message):
+    def _handle_recipe_action(self, request, pk, model_class):
         """Общий метод для добавления/удаления рецепта в избранное/корзину"""
         if request.method == 'DELETE':
             item = get_object_or_404(
@@ -106,11 +90,10 @@ class RecipeViewSet(viewsets.ModelViewSet):
         # POST метод
         recipe = self.get_object()
 
-        obj, created = model_class.objects.get_or_create(
+        _, created = model_class.objects.get_or_create(
             user=request.user,
             recipe=recipe
         )
-
         if not created:
             raise serializers.ValidationError(
                 f'Рецепт "{recipe.name}" уже добавлен в '
@@ -139,7 +122,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
     def shopping_cart(self, request, pk=None):
         """Добавление/удаление рецепта в список покупок"""
         return self._handle_recipe_action(
-            request, pk, ShoppingCart, 'Рецепт уже в списке покупок'
+            request, pk, ShoppingCart
         )
 
     @action(
@@ -160,15 +143,12 @@ class RecipeViewSet(viewsets.ModelViewSet):
 
         recipes = Recipe.objects.filter(
             shopping_cart__user=request.user
-        ).values(
-            'name',
-            'author__username'
         ).distinct().order_by('name')
 
         file_content = generate_shopping_list_content(ingredients, recipes)
 
         return FileResponse(
-            io.BytesIO(file_content.encode('utf-8')),
+            file_content,
             as_attachment=True,
             filename='foodgram_shopping_list.txt'
         )
@@ -181,10 +161,11 @@ class RecipeViewSet(viewsets.ModelViewSet):
     )
     def get_link(self, request, pk=None):
         """Короткая ссылка на рецепт"""
-        get_object_or_404(Recipe, id=pk)
+        if not Recipe.objects.filter(id=pk).exists():
+            raise Http404("Рецепт не найден")
         return Response({
             'short-link': request.build_absolute_uri(
-                reverse('recipes:recipe-short-link', kwargs={'pk': pk})
+                reverse('recipes:recipe-short-link', args=[pk])
             )
         })
 
@@ -235,12 +216,16 @@ class UserFoodgramViewSet(UserViewSet):
             raise serializers.ValidationError(
                 'Нельзя подписаться на самого себя')
 
-        if Subscription.objects.filter(user=user, author=author).exists():
+        subscription, created = Subscription.objects.get_or_create(
+            user=user,
+            author=author
+        )
+
+        if not created:
             raise serializers.ValidationError(
-                'Вы уже подписаны на этого пользователя'
+                f'Вы уже подписаны на пользователя {author.username}'
             )
 
-        Subscription.objects.create(user=user, author=author)
         serializer = UserWithRecipesSerializer(
             author, context={'request': request}
         )

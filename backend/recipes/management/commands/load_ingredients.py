@@ -1,37 +1,37 @@
-import csv
-import os
+import json
 
 from django.core.management.base import BaseCommand
-from ingredients.models import Ingredient
+from recipes.models import Ingredient
 
 
 class Command(BaseCommand):
-    """Загрузка данных с файла ingredients.csv"""
+    """Загрузка данных с файла ingredients.json"""
 
     def handle(self, *args, **options):
         # Путь к файлу в контейнере
-        file_path = '/app/data/ingredients.csv'
+        file_path = '/app/data/ingredients.json'
 
         self.stdout.write(f"Пытаемся открыть файл: {file_path}")
 
         try:
-            # Добавление ингредиентов
             with open(file_path, 'r', encoding='utf-8') as f:
-                reader = csv.reader(f)
-                for row in reader:
-                    if len(row) >= 2:
-                        Ingredient.objects.get_or_create(
-                            name=row[0].strip(),
-                            measurement_unit=row[1].strip()
+                data = json.load(f)
+                ingredients_to_create = []
+                for item in data:
+                    ingredients_to_create.append(
+                        Ingredient(
+                            name=item['name'].strip(),
+                            measurement_unit=item['measurement_unit'].strip()
                         )
-                        self.stdout.write(f"Добавлен ингредиент: {row[0]}")
+                    )
+
+                # Один вызов для создания всех записей
+                Ingredient.objects.bulk_create(ingredients_to_create)
 
             self.stdout.write(self.style.SUCCESS(
-                'Ингредиенты успешно загружены!'))
+                f'Загружено {len(ingredients_to_create)} ингредиентов'))
 
-        except FileNotFoundError:
-            self.stdout.write(self.style.ERROR(f'Файл не найден: {file_path}'))
-            # Проверим что есть в папке /app/data
-            if os.path.exists('/app/data'):
-                files = os.listdir('/app/data')
-                self.stdout.write(f"Файлы в /app/data: {files}")
+        except Exception as e:
+            self.stdout.write(self.style.ERROR(
+                f'Ошибка при загрузке файла {file_path}: {str(e)}'
+            ))

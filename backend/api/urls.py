@@ -10,13 +10,5 @@ router.register('recipes', views.RecipeViewSet, basename='recipes')
 router.register('users', views.UserFoodgramViewSet, basename='users')
 
 urlpatterns = [
-    path('users/subscriptions/',
-         views.UserFoodgramViewSet.as_view({'get': 'subscriptions'}),
-         name='subscriptions'),
-    path('users/<int:id>/subscribe/',
-         views.UserFoodgramViewSet.as_view({'post': 'subscribe',
-                                            'delete': 'subscribe'}),
-         name='subscribe'),
-    path('', include('djoser.urls')),
     path('', include(router.urls)),
 ]

@@ -92,37 +92,38 @@ class RecipeCreateUpdateSerializer(serializers.ModelSerializer):
             ).items() if count > 1
         }
 
-    def validate_ingredients(self, ingredients_data):
-        """Проверяем что ингредиенты не повторяются"""
-        duplicates = self.find_duplicates(ingredients_data,
-                                          get_id_func=lambda x: x['id'])
+    def _validate_no_duplicates(self, data, model, field_name, id_func):
+        """Общая функция для проверки дубликатов"""
+        duplicates = self.find_duplicates(data, get_id_func=id_func)
 
         if duplicates:
-            duplicate_names = Ingredient.objects.filter(
+            duplicate_names = model.objects.filter(
                 id__in=duplicates
             ).values_list('name', flat=True)
             raise serializers.ValidationError(
-                f'Продукты не должны повторяться. '
-                f'Дублируются: {duplicate_names}'
+                f'{field_name} не должны повторяться. '
+                f'Дублируются: {list(duplicate_names)}'
             )
 
-        return ingredients_data
+        return data
+
+    def validate_ingredients(self, ingredients_data):
+        """Проверяем что ингредиенты не повторяются"""
+        return self._validate_no_duplicates(
+            ingredients_data,
+            Ingredient,
+            'Продукты',
+            lambda x: x['id']
+        )
 
     def validate_tags(self, tags_data):
         """Проверяем что теги не повторяются"""
-        duplicates = self.find_duplicates(tags_data,
-                                          get_id_func=lambda x: x.id)
-
-        if duplicates:
-            duplicate_names = Tag.objects.filter(
-                id__in=duplicates
-            ).values_list('name', flat=True)
-            raise serializers.ValidationError(
-                f'Теги не должны повторяться. '
-                f'Дублируются: {duplicate_names}'
-            )
-
-        return tags_data
+        return self._validate_no_duplicates(
+            tags_data,
+            Tag,
+            'Теги',
+            lambda x: x.id
+        )
 
     def create_ingredients(self, recipe, ingredients):
         """Создаем связи рецепта с ингредиентами"""
@@ -152,9 +153,6 @@ class RecipeCreateUpdateSerializer(serializers.ModelSerializer):
         ingredients = validated_data.pop('ingredients', None)
         tags = validated_data.pop('tags', None)
 
-        # Обновляем основные поля
-        instance = super().update(instance, validated_data)
-
         # Обновляем теги если переданы
         instance.tags.set(tags)
 
@@ -162,7 +160,7 @@ class RecipeCreateUpdateSerializer(serializers.ModelSerializer):
         instance.ingredient_amounts.all().delete()
         self.create_ingredients(instance, ingredients)
 
-        return instance
+        return super().update(instance, validated_data)
 
 
 class RecipeSerializer(serializers.ModelSerializer):
@@ -257,7 +255,6 @@ class UserWithRecipesSerializer(UserSerializer):
 
     def get_recipes(self, obj):
         """Возвращает рецепты пользователя с лимитом"""
-        from .serializers import RecipeMinifiedSerializer
         request = self.context.get('request')
         recipes_limit = (
             request.query_params.get('recipes_limit')

@@ -1,5 +1,5 @@
 from django.contrib.auth.models import AbstractUser
-from django.core.validators import MinValueValidator
+from django.core.validators import MinValueValidator, RegexValidator
 from django.db import models
 
 from .constants import MIN_AMOUNT, MIN_COOKING_TIME
@@ -7,6 +7,34 @@ from .constants import MIN_AMOUNT, MIN_COOKING_TIME
 
 class User(AbstractUser):
     """Модель пользователя с аватаром"""
+    username_validator = RegexValidator(
+        regex=r'^[\w.@+-]+\Z',
+        message='Имя пользователя содержит недопустимые символы'
+    )
+
+    username = models.CharField(
+        max_length=150,
+        unique=True,
+        validators=[username_validator],
+        verbose_name='Имя пользователя'
+    )
+
+    email = models.EmailField(
+        max_length=254,
+        unique=True,
+        verbose_name='Email'
+    )
+
+    first_name = models.CharField(
+        max_length=150,
+        verbose_name='Имя'
+    )
+
+    last_name = models.CharField(
+        max_length=150,
+        verbose_name='Фамилия'
+    )
+
     avatar = models.ImageField(
         upload_to='users/avatars/',
         blank=True,
@@ -14,9 +42,12 @@ class User(AbstractUser):
         verbose_name='Аватар'
     )
 
+    USERNAME_FIELD = 'email'
+
     class Meta:
         verbose_name = 'Пользователь'
         verbose_name_plural = 'Пользователи'
+        ordering = ('email',)
 
     def __str__(self):
         return self.username
@@ -177,13 +208,11 @@ class UserRecipeBaseModel(models.Model):
     """Базовая модель для связей пользователь-рецепт"""
     user = models.ForeignKey(
         User,
-        on_delete=models.CASCADE,
-        related_name='%(class)s_users'
+        on_delete=models.CASCADE
     )
     recipe = models.ForeignKey(
         Recipe,
-        on_delete=models.CASCADE,
-        related_name='%(class)s_recipes'
+        on_delete=models.CASCADE
     )
 
     class Meta:
@@ -194,6 +223,8 @@ class UserRecipeBaseModel(models.Model):
                 name='unique_%(class)s'
             )
         ]
+        user_related_name = '%(class)ss'
+        recipe_related_name = '%(class)ss'
 
     def __str__(self):
         return f'{self.recipe} [User: {self.user}]'

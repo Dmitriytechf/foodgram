@@ -28,9 +28,9 @@ class IngredientAdmin(admin.ModelAdmin):
         )
 
     @admin.display(description='В рецептах', ordering='_recipes_count')
-    def recipes_count(self, obj):
+    def recipes_count(self, count):
         """Количество рецептов с этим ингредиентом"""
-        return obj._recipes_count
+        return count._recipes_count
 
 
 @admin.register(Tag)
@@ -42,9 +42,9 @@ class TagAdmin(admin.ModelAdmin):
     ordering = ('name',)
 
     @admin.display(description='Рецептов')
-    def get_recipes_count(self, obj):
+    def get_recipes_count(self, count):
         """Показывает количество рецептов с этим тегом"""
-        return obj.recipes.count()
+        return count.recipes.count()
 
 
 class IngredientAmountInline(admin.TabularInline):
@@ -62,10 +62,10 @@ class RecipeAdmin(admin.ModelAdmin):
         'name',
         'author',
         'favorites_count',
-        'text',
         'cooking_time',
         'get_tags_html',
         'get_image_html',
+        'get_ingredients_preview',
     )
     list_display_links = ('name',)
     search_fields = ('name', 'author__email', 'author__username')
@@ -74,19 +74,27 @@ class RecipeAdmin(admin.ModelAdmin):
     inlines = (IngredientAmountInline,)
     ordering = ('-created_at',)
 
+    @admin.display(description='Продукты')
+    def get_ingredients_preview(self, ingredients):
+        """Показывает список ингредиентов рецепта"""
+        ingredients = ingredients.ingredient_amounts.all()[:5]
+        return ' '.join([
+            f'{ing.ingredient.name} ({ing.amount} '
+            f'{ing.ingredient.measurement_unit})'
+            for ing in ingredients
+        ])
+
     @admin.display(description='В избранном')
-    def favorites_count(self, favorite_count):
+    def favorites_count(self, recipe):
         """Количество добавлений в избранное"""
-        return favorite_count.favorites.count()
+        return recipe.favorites.count()
 
     @admin.display(description='Теги')
-    def get_tags_html(self, obj):
+    def get_tags_html(self, tags_html):
         """Красивые теги"""
         return mark_safe(' '.join(
-            f'<span style="background: #6c757d; color: white; '
-            f'padding: 2px 6px; border-radius: 10px; font-size: 11px;">'
-            f'{tag.name}</span>'
-            for tag in obj.tags.all()
+            f'{tag.name}'
+            for tag in tags_html.tags.all()
         ))
 
 
@@ -98,8 +106,8 @@ class UserRecipeAdmin(admin.ModelAdmin):
     search_fields = ('user__email', 'user__username', 'recipe__name')
 
     @admin.display(description='Автор рецепта')
-    def recipe_author(self, obj):
-        return obj.recipe.author
+    def recipe_author(self, recipe_author):
+        return recipe_author.recipe.author
 
 
 @admin.register(Subscription)
@@ -124,31 +132,31 @@ class UserAdmin(UserAdmin):
     ordering = ('username',)
 
     @admin.display(description='ФИО')
-    def get_full_name(self, full_name):
+    def get_full_name(self, user):
         """ФИО = имя + фамилия"""
-        return f"{full_name.first_name} {full_name.last_name}".strip() or '—'
+        return f"{user.first_name} {user.last_name}".strip() or '—'
 
     @mark_safe
     @admin.display(description='Аватар')
-    def get_avatar_html(self, obj):
+    def get_avatar_html(self, avatar_html):
         """HTML-разметка для аватара"""
-        if obj.avatar:
+        if avatar_html.avatar:
             return (
-                f'<img src="{obj.avatar.url}" style="max-height: 50px; '
+                f'<img src="{avatar_html.avatar.url}" style="max-height: 50px;'
                 f'max-width: 50px; border-radius: 50%; object-fit: cover;" />'
             )
 
     @admin.display(description='Рецепты')
-    def recipes_count(self, obj):
+    def recipes_count(self, recipes_count):
         """Количество рецептов пользователя"""
-        return obj.recipes.count()
+        return recipes_count.recipes.count()
 
     @admin.display(description='Подписки')
-    def following_count(self, obj):
+    def following_count(self, following_count):
         """Количество подписок пользователя"""
-        return obj.following.count()
+        return following_count.following.count()
 
     @admin.display(description='Подписчики')
-    def followers_count(self, obj):
+    def followers_count(self, followers_count):
         """Количество подписчиков пользователя"""
-        return obj.followers.count()
+        return followers_count.followers.count()
