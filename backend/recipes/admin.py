@@ -127,7 +127,8 @@ class RecipeAdmin(admin.ModelAdmin):
         """Показывает список ингредиентов рецепта"""
         ingredients = product.ingredient_amounts.all()[:5]
         return mark_safe('<br>'.join([
-            f'{ing.ingredient.name} ({ing.amount} {ing.ingredient.measurement_unit})'
+            f'{ing.ingredient.name} '
+            f'({ing.amount} {ing.ingredient.measurement_unit})'
             for ing in ingredients
         ]))
 

@@ -9,13 +9,13 @@ from django.urls import reverse
 from djoser.views import UserViewSet
 from django_filters.rest_framework import (DjangoFilterBackend, FilterSet,
                                            BooleanFilter, CharFilter)
-from rest_framework import filters, serializers, status, viewsets
+from rest_framework import serializers, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.parsers import JSONParser, MultiPartParser
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from django.http import Http404
-from django.http import HttpResponse
+from django.http import FileResponse
 
 from recipes.models import (Favorite, Ingredient, IngredientAmount, Recipe,
                             ShoppingCart, Subscription, Tag)
@@ -111,16 +111,19 @@ class RecipeViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
         instance = serializer.save(author=request.user)
 
-        output_serializer = RecipeSerializer(instance, context={'request': request})
+        output_serializer = RecipeSerializer(instance,
+                                             context={'request': request})
 
         response_data = output_serializer.data
         response_data['_redirect'] = {
             'required': True,
             'url': '/api/recipes/'
         }
-        
+
         headers = self.get_success_headers(output_serializer.data)
-        return Response(response_data, status=status.HTTP_201_CREATED, headers=headers)
+        return Response(response_data,
+                        status=status.HTTP_201_CREATED,
+                        headers=headers)
 
     def perform_create(self, serializer):
         """Автоматически устанавливаем автора при создании"""
@@ -128,18 +131,16 @@ class RecipeViewSet(viewsets.ModelViewSet):
 
     def _handle_recipe_action(self, request, pk, model_class):
         """Общий метод для добавления/удаления рецепта в избранное/корзину"""
-        recipe = get_object_or_404(Recipe, id=pk)
-
         if request.method == 'DELETE':
             item = get_object_or_404(
                 model_class,
                 user=request.user,
-                recipe=recipe
+                recipe_id=pk
             )
             item.delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
 
-        # POST метод
+        recipe = get_object_or_404(Recipe, id=pk)
         _, created = model_class.objects.get_or_create(
             user=request.user,
             recipe=recipe
@@ -197,14 +198,12 @@ class RecipeViewSet(viewsets.ModelViewSet):
 
         file_content = generate_shopping_list_content(ingredients, recipes)
 
-        response = HttpResponse(
+        return FileResponse(
             file_content,
-            content_type='text/plain; charset=utf-8'
+            as_attachment=True,
+            filename='foodgram_shopping_list.txt',
+            content_type='text/plain'
         )
-        response['Content-Disposition'] = (
-            'attachment; filename="foodgram_shopping_list.txt"'
-        )
-        return response
 
     @action(
         methods=['get'],

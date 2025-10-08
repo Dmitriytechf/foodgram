@@ -6,17 +6,19 @@ from django.utils.translation import gettext_lazy as _
 from .constants import MIN_AMOUNT, MIN_COOKING_TIME
 
 
+USERNAME_REGEX = r'^[\w.@+-]+\Z'
+USERNAME_VALIDATOR = RegexValidator(
+    regex=USERNAME_REGEX,
+    message='Имя пользователя содержит недопустимые символы'
+)
+
+
 class User(AbstractUser):
     """Модель пользователя с аватаром"""
-    username_validator = RegexValidator(
-        regex=r'^[\w.@+-]+\Z',
-        message='Имя пользователя содержит недопустимые символы'
-    )
-
     username = models.CharField(
         max_length=150,
         unique=True,
-        validators=[username_validator],
+        validators=[USERNAME_VALIDATOR],
         verbose_name='Логин'
     )
 

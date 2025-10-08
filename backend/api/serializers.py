@@ -4,7 +4,7 @@ from collections import Counter
 
 from django.contrib.auth import get_user_model
 from django.core.files.base import ContentFile
-from djoser.serializers import UserSerializer
+from djoser.serializers import UserSerializer as BaseUserSerializer
 from rest_framework import serializers
 
 from recipes.constants import MIN_AMOUNT
@@ -163,13 +163,39 @@ class RecipeCreateUpdateSerializer(serializers.ModelSerializer):
         return super().update(instance, validated_data)
 
 
+class UserSerializer(BaseUserSerializer):
+    """Сериализатор для получения данных пользователя"""
+    is_subscribed = serializers.SerializerMethodField()
+    avatar = serializers.ImageField(read_only=True)
+
+    class Meta(BaseUserSerializer.Meta):
+        model = User
+        fields = (
+            'id', 'email', 'username',
+            'first_name', 'last_name',
+            'is_subscribed', 'avatar'
+        )
+        read_only_fields = fields
+
+    def get_is_subscribed(self, user):
+        """Проверяет, подписан ли текущий пользователь на кого-то"""
+        request = self.context.get('request')
+
+        if request and request.user.is_authenticated:
+            return Subscription.objects.filter(
+                user=request.user,
+                author=user
+            ).exists()
+        return False
+
+
 class RecipeSerializer(serializers.ModelSerializer):
     """Сериализатор для отображения рецепта"""
     tags = TagSerializer(
         many=True,
         read_only=True
     )
-    author = serializers.SerializerMethodField()
+    author = UserSerializer(read_only=True)
     ingredients = IngredientInRecipeSerializer(
         source='ingredient_amounts',
         many=True,
@@ -186,10 +212,6 @@ class RecipeSerializer(serializers.ModelSerializer):
             'name', 'image', 'text', 'cooking_time'
         )
         read_only_fields = ('id', 'is_subscribed')
-
-    def get_author(self, obj):
-        """Возвращаем автора с аватаром"""
-        return UserSerializer(obj.author, context=self.context).data
 
     def _check_relation(self, recipe, relation_model):
         """Общий метод для проверки связи пользователь-рецепт"""
@@ -218,36 +240,13 @@ class RecipeMinifiedSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
 
-class UserSerializer(UserSerializer):
-    """Сериализатор для получения данных пользователя"""
-    is_subscribed = serializers.SerializerMethodField()
-    avatar = serializers.ImageField(read_only=True)
-
-    class Meta(UserSerializer.Meta):
-        model = User
-        fields = (
-            'id', 'email', 'username',
-            'first_name', 'last_name',
-            'is_subscribed', 'avatar'
-        )
-        read_only_fields = fields
-
-    def get_is_subscribed(self, user):
-        """Проверяет, подписан ли текущий пользователь на кого-то"""
-        request = self.context.get('request')
-
-        if request and request.user.is_authenticated:
-            return Subscription.objects.filter(
-                user=request.user,
-                author=user
-            ).exists()
-        return False
-
-
 class UserWithRecipesSerializer(UserSerializer):
     """Сериализатор пользователя с рецептами для подписок"""
     recipes = serializers.SerializerMethodField()
-    recipes_count = serializers.SerializerMethodField()
+    recipes_count = serializers.IntegerField(
+        source='recipes.count',
+        read_only=True
+    )
 
     class Meta(UserSerializer.Meta):
         model = User
@@ -275,24 +274,6 @@ class UserWithRecipesSerializer(UserSerializer):
 
         return RecipeMinifiedSerializer(recipes, many=True,
                                         context=self.context).data
-
-    def get_recipes_count(self, obj):
-        """Количество рецептов пользователя"""
-        return obj.recipes.count()
-
-
-class Base64ImageField(serializers.ImageField):
-    """Кастомное поле для изображений в base64"""
-
-    def to_internal_value(self, data):
-        if isinstance(data, str) and data.startswith('data:image'):
-            format, imgstr = data.split(';base64,')
-            ext = format.split('/')[-1]
-
-            filename = f'{uuid.uuid4()}.{ext}'
-            data = ContentFile(base64.b64decode(imgstr), name=filename)
-
-        return super().to_internal_value(data)
 
 
 class AvatarSerializer(serializers.Serializer):

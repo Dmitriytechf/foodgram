@@ -1,8 +1,9 @@
 from django.utils import timezone
 
 
-INGREDIENT_FORMAT = "{idx:2d}. {name:<25} {total_amount:>5} {unit}"
-RECIPE_FORMAT = "{idx:2d}. {name} (автор: {author})"
+INGREDIENT_FORMAT = "{idx}. {name} {total_amount} {unit}"
+RECIPE_FORMAT = "{idx}. {name} (автор: {author})"
+SEPARATOR = '-' * 50
 
 
 def generate_shopping_list_content(ingredients, recipes):
@@ -11,7 +12,7 @@ def generate_shopping_list_content(ingredients, recipes):
     return '\n'.join([
         'Foodgram - Список покупок',
         f'Дата составления: {current_date}',
-        '-' * 50,
+        SEPARATOR,
         '',
         'Ингредиенты:',
         *[
@@ -24,7 +25,7 @@ def generate_shopping_list_content(ingredients, recipes):
             for idx, item in enumerate(ingredients, 1)
         ],
         '',
-        '-' * 50,
+        SEPARATOR,
         '',
         'Рецепты:',
         *[
@@ -36,8 +37,8 @@ def generate_shopping_list_content(ingredients, recipes):
             for idx, recipe in enumerate(recipes, 1)
         ],
         '',
-        '-' * 50,
+        SEPARATOR,
         f'Всего ингредиентов: {len(ingredients)}',
         f'Всего рецептов: {len(recipes)}',
-        '-' * 50
+        SEPARATOR
     ])
