@@ -39,6 +39,19 @@ class TagViewSet(viewsets.ReadOnlyModelViewSet):
     pagination_class = None
 
 
+class IngredientFilter(FilterSet):
+    """
+    Вьюсет для фильтрации ингредиентов.
+    """
+    name = CharFilter(field_name='name', lookup_expr='istartswith')
+    search = CharFilter(field_name='name', lookup_expr='istartswith')
+    q = CharFilter(field_name='name', lookup_expr='istartswith')
+
+    class Meta:
+        model = Ingredient
+        fields = ('name',)
+
+
 class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
     """
     Вьюсет для ингредиентов.
@@ -47,8 +60,8 @@ class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Ingredient.objects.all()
     serializer_class = IngredientSerializer
     pagination_class = None
-    filter_backends = (DjangoFilterBackend, filters.SearchFilter)
-    search_fields = ('^name',)
+    filter_backends = (DjangoFilterBackend,)
+    filterset_class = IngredientFilter
 
 
 class RecipeFilter(FilterSet):
@@ -91,6 +104,23 @@ class RecipeViewSet(viewsets.ModelViewSet):
         if self.action in ['create', 'update', 'partial_update']:
             return RecipeCreateUpdateSerializer
         return RecipeSerializer
+
+    def create(self, request, *args, **kwargs):
+        """Переопределяем create"""
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        instance = serializer.save(author=request.user)
+
+        output_serializer = RecipeSerializer(instance, context={'request': request})
+
+        response_data = output_serializer.data
+        response_data['_redirect'] = {
+            'required': True,
+            'url': '/api/recipes/'
+        }
+        
+        headers = self.get_success_headers(output_serializer.data)
+        return Response(response_data, status=status.HTTP_201_CREATED, headers=headers)
 
     def perform_create(self, serializer):
         """Автоматически устанавливаем автора при создании"""
@@ -185,12 +215,11 @@ class RecipeViewSet(viewsets.ModelViewSet):
     def get_link(self, request, pk=None):
         """Короткая ссылка на рецепт"""
         if not Recipe.objects.filter(id=pk).exists():
-            raise Http404(
-                f'Рецепт с id {pk} не найден')
+            raise Http404(f'Рецепт с id {pk} не найден')
+
+        short_link_url = reverse('recipes:recipe-short-link', args=[pk])
         return Response({
-            'short-link': request.build_absolute_uri(
-                reverse('recipes:recipe-short-link', args=[pk])
-            )
+            'short-link': request.build_absolute_uri(short_link_url)
         })
 
 

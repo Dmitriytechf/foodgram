@@ -1,6 +1,7 @@
 from django.contrib.auth.models import AbstractUser
 from django.core.validators import MinValueValidator, RegexValidator
 from django.db import models
+from django.utils.translation import gettext_lazy as _
 
 from .constants import MIN_AMOUNT, MIN_COOKING_TIME
 
@@ -16,15 +17,13 @@ class User(AbstractUser):
         max_length=150,
         unique=True,
         validators=[username_validator],
-        blank=False,
-        null=False,
         verbose_name='Логин'
     )
 
     email = models.EmailField(
         max_length=254,
         unique=True,
-        verbose_name='Email'
+        verbose_name=_('Email')
     )
 
     first_name = models.CharField(

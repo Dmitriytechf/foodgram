@@ -28,8 +28,8 @@ INSTALLED_APPS = [
     'djoser',
     # 'corsheaders',
     # Мои приложения
-    'api',
     'recipes',
+    'api',
 ]
 
 MIDDLEWARE = [
