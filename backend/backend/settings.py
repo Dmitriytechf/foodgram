@@ -24,11 +24,12 @@ INSTALLED_APPS = [
     # Сторонние приложения
     'rest_framework',
     'rest_framework.authtoken',
+    'django_filters',
     'djoser',
     # 'corsheaders',
     # Мои приложения
     'api',
-    'recipes'
+    'recipes',
 ]
 
 MIDDLEWARE = [
@@ -126,9 +127,9 @@ REST_FRAMEWORK = {
 
 DJOSER = {
     'SERIALIZERS': {
-        'user_create': 'users.serializers.CustomUserCreateSerializer',
-        'user': 'users.serializers.CustomUserSerializer',
-        'current_user': 'users.serializers.CustomUserSerializer',
+        'user_create': 'djoser.serializers.UserCreateSerializer',
+        'user': 'api.serializers.UserSerializer',
+        'current_user': 'api.serializers.UserSerializer',
     },
     'PERMISSIONS': {
         'user': ['rest_framework.permissions.AllowAny'],
@@ -137,6 +138,7 @@ DJOSER = {
         'set_password': ['rest_framework.permissions.IsAuthenticated'],
     },
     'HIDE_USERS': False,
+    'LOGIN_FIELD': 'email',
 }
 
 LOGGING = {

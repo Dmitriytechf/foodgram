@@ -16,22 +16,26 @@ class Command(BaseCommand):
         try:
             with open(file_path, 'r', encoding='utf-8') as f:
                 data = json.load(f)
-                ingredients_to_create = []
-                for item in data:
-                    ingredients_to_create.append(
-                        Ingredient(
-                            name=item['name'].strip(),
-                            measurement_unit=item['measurement_unit'].strip()
-                        )
+                ingredients_to_create = [
+                    Ingredient(
+                        name=item['name'].strip(),
+                        measurement_unit=item['measurement_unit'].strip()
                     )
+                    for item in data
+                ]
 
                 # Один вызов для создания всех записей
-                Ingredient.objects.bulk_create(ingredients_to_create)
+                Ingredient.objects.bulk_create(
+                    ingredients_to_create,
+                    ignore_conflicts=True
+                )
 
             self.stdout.write(self.style.SUCCESS(
-                f'Загружено {len(ingredients_to_create)} ингредиентов'))
+                f'Импорт из ingredients.json: обработано {len(data)} записей, '
+                f'добавлено в базу {len(ingredients_to_create)} ингредиентов'
+            ))
 
         except Exception as e:
             self.stdout.write(self.style.ERROR(
-                f'Ошибка при загрузке файла {file_path}: {str(e)}'
+                f'Ошибка при загрузке файла {file_path}: {e}'
             ))

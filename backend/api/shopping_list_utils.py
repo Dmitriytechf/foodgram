@@ -1,6 +1,10 @@
 from django.utils import timezone
 
 
+INGREDIENT_FORMAT = "{idx:2d}. {name:<25} {total_amount:>5} {unit}"
+RECIPE_FORMAT = "{idx:2d}. {name} (автор: {author})"
+
+
 def generate_shopping_list_content(ingredients, recipes):
     """Генерирует содержимое списка покупок"""
     current_date = timezone.now().strftime('%d.%m.%Y %H:%M')
@@ -11,7 +15,7 @@ def generate_shopping_list_content(ingredients, recipes):
         '',
         'Ингредиенты:',
         *[
-            "{idx:2d}. {name:<25} {total_amount:>5} {unit}".format(
+            INGREDIENT_FORMAT.format(
                 idx=idx,
                 name=item['name'].capitalize(),
                 total_amount=item['total_amount'],
@@ -24,10 +28,10 @@ def generate_shopping_list_content(ingredients, recipes):
         '',
         'Рецепты:',
         *[
-            "{idx:2d}. {name} (автор: {author})".format(
+            RECIPE_FORMAT.format(
                 idx=idx,
-                name=recipe['name'],
-                author=recipe['author__username']
+                name=recipe.name,
+                author=recipe.author.username
             )
             for idx, recipe in enumerate(recipes, 1)
         ],

@@ -169,9 +169,7 @@ class RecipeSerializer(serializers.ModelSerializer):
         many=True,
         read_only=True
     )
-    author = UserSerializer(
-        read_only=True
-    )
+    author = serializers.SerializerMethodField()
     ingredients = IngredientInRecipeSerializer(
         source='ingredient_amounts',
         many=True,
@@ -187,7 +185,11 @@ class RecipeSerializer(serializers.ModelSerializer):
             'is_favorited', 'is_in_shopping_cart',
             'name', 'image', 'text', 'cooking_time'
         )
-        read_only_fields = fields
+        read_only_fields = ('id', 'is_subscribed')
+
+    def get_author(self, obj):
+        """Возвращаем автора с аватаром"""
+        return UserSerializer(obj.author, context=self.context).data
 
     def _check_relation(self, recipe, relation_model):
         """Общий метод для проверки связи пользователь-рецепт"""
@@ -219,6 +221,7 @@ class RecipeMinifiedSerializer(serializers.ModelSerializer):
 class UserSerializer(UserSerializer):
     """Сериализатор для получения данных пользователя"""
     is_subscribed = serializers.SerializerMethodField()
+    avatar = serializers.ImageField(read_only=True)
 
     class Meta(UserSerializer.Meta):
         model = User
@@ -229,14 +232,14 @@ class UserSerializer(UserSerializer):
         )
         read_only_fields = fields
 
-    def get_is_subscribed(self, is_subscribed):
+    def get_is_subscribed(self, user):
         """Проверяет, подписан ли текущий пользователь на кого-то"""
         request = self.context.get('request')
 
         if request and request.user.is_authenticated:
             return Subscription.objects.filter(
                 user=request.user,
-                author=is_subscribed
+                author=user
             ).exists()
         return False
 
@@ -244,7 +247,7 @@ class UserSerializer(UserSerializer):
 class UserWithRecipesSerializer(UserSerializer):
     """Сериализатор пользователя с рецептами для подписок"""
     recipes = serializers.SerializerMethodField()
-    recipes_count = serializers.SerializerMethodField(source='recipes.count')
+    recipes_count = serializers.SerializerMethodField()
 
     class Meta(UserSerializer.Meta):
         model = User
@@ -272,6 +275,10 @@ class UserWithRecipesSerializer(UserSerializer):
 
         return RecipeMinifiedSerializer(recipes, many=True,
                                         context=self.context).data
+
+    def get_recipes_count(self, obj):
+        """Количество рецептов пользователя"""
+        return obj.recipes.count()
 
 
 class Base64ImageField(serializers.ImageField):

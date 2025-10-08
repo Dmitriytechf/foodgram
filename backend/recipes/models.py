@@ -16,7 +16,9 @@ class User(AbstractUser):
         max_length=150,
         unique=True,
         validators=[username_validator],
-        verbose_name='Имя пользователя'
+        blank=False,
+        null=False,
+        verbose_name='Логин'
     )
 
     email = models.EmailField(
@@ -43,6 +45,7 @@ class User(AbstractUser):
     )
 
     USERNAME_FIELD = 'email'
+    REQUIRED_FIELDS = ['username', 'first_name', 'last_name']
 
     class Meta:
         verbose_name = 'Пользователь'
@@ -50,7 +53,7 @@ class User(AbstractUser):
         ordering = ('email',)
 
     def __str__(self):
-        return self.username
+        return self.email
 
 
 class Subscription(models.Model):
@@ -66,7 +69,7 @@ class Subscription(models.Model):
     author = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
-        related_name='authors',
+        related_name='following',
         verbose_name='Автор'
     )
 
@@ -208,11 +211,13 @@ class UserRecipeBaseModel(models.Model):
     """Базовая модель для связей пользователь-рецепт"""
     user = models.ForeignKey(
         User,
-        on_delete=models.CASCADE
+        on_delete=models.CASCADE,
+        related_name='%(class)s'
     )
     recipe = models.ForeignKey(
         Recipe,
-        on_delete=models.CASCADE
+        on_delete=models.CASCADE,
+        related_name='%(class)s'
     )
 
     class Meta:
@@ -223,8 +228,6 @@ class UserRecipeBaseModel(models.Model):
                 name='unique_%(class)s'
             )
         ]
-        user_related_name = '%(class)ss'
-        recipe_related_name = '%(class)ss'
 
     def __str__(self):
         return f'{self.recipe} [User: {self.user}]'

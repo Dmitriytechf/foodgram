@@ -30,6 +30,7 @@ services:
       - static_volume:/app/static/
       - media_volume:/app/media/
       - ../data:/app/data/
+      - ../backend:/app
     depends_on:
       db:
         condition: service_healthy

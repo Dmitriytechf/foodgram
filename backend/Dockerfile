@@ -11,4 +11,4 @@ COPY . .
 
 RUN python manage.py collectstatic --noinput
 
-CMD ["sh", "-c", "python manage.py migrate --noinput && gunicorn backend.wsgi:application --bind 0:8000"]
+CMD ["gunicorn", "backend.wsgi:application", "--bind", "0:8000"]

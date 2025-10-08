@@ -87,7 +87,7 @@ class RecipeAdmin(admin.ModelAdmin):
     @admin.display(description='В избранном')
     def favorites_count(self, recipe):
         """Количество добавлений в избранное"""
-        return recipe.favorites.count()
+        return recipe.favorite.count()
 
     @admin.display(description='Теги')
     def get_tags_html(self, tags_html):
@@ -96,6 +96,13 @@ class RecipeAdmin(admin.ModelAdmin):
             f'{tag.name}'
             for tag in tags_html.tags.all()
         ))
+
+    @mark_safe
+    @admin.display(description='Изображения')
+    def get_image_html(self, image_html):
+        """Миниатюра изображения"""
+        if image_html.image:
+            return f'<img src="{image_html.image.url}" style="height: 40px;">'
 
 
 @admin.register(Favorite, ShoppingCart)
@@ -113,11 +120,9 @@ class UserRecipeAdmin(admin.ModelAdmin):
 @admin.register(Subscription)
 class SubscriptionAdmin(admin.ModelAdmin):
     """Админка для подписок"""
-    list_display = ('user', 'author', 'created_at')
-    list_filter = ('created_at',)
+    list_display = ('user', 'author')
     search_fields = ('user__username', 'user__email',
                      'author__username', 'author__email')
-    ordering = ('-created_at',)
 
 
 @admin.register(User)

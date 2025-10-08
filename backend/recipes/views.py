@@ -1,5 +1,5 @@
 from django.shortcuts import redirect
-from django.http import Http404
+from rest_framework import serializers
 
 from .models import Recipe
 
@@ -7,6 +7,8 @@ from .models import Recipe
 def recipe_short_link(request, pk):
     """Перенаправление с короткой ссылки на полный рецепт"""
     if not Recipe.objects.filter(id=pk).exists():
-        raise Http404("Рецепт не найден")
+        raise serializers.ValidationError(
+            f'Рецепт с id {pk} не найден'
+        )
 
-    return redirect('recipe-detail', pk=pk)
+    return redirect(f'/api/recipes/{pk}/')
