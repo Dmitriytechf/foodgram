@@ -15,6 +15,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from django.http import Http404
 from django.http import FileResponse
+from django.urls import reverse
 
 from recipes.models import (Favorite, Ingredient, IngredientAmount, Recipe,
                             ShoppingCart, Subscription, Tag)
@@ -108,26 +109,6 @@ class RecipeViewSet(viewsets.ModelViewSet):
         """Автоматически устанавливаем автора при создании"""
         serializer.save(author=self.request.user)
 
-    def create(self, request, *args, **kwargs):
-        """Переопределяем create"""
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        instance = serializer.save(author=request.user)
-
-        output_serializer = RecipeSerializer(instance,
-                                             context={'request': request})
-
-        response_data = output_serializer.data
-        response_data['_redirect'] = {
-            'required': True,
-            'url': '/api/recipes/'
-        }
-
-        headers = self.get_success_headers(output_serializer.data)
-        return Response(response_data,
-                        status=status.HTTP_201_CREATED,
-                        headers=headers)
-
     def _handle_recipe_action(self, request, pk, model_class):
         """Общий метод для добавления/удаления рецепта в избранное/корзину"""
         if request.method == 'DELETE':
@@ -217,7 +198,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
 
         return Response({
             'short-link': request.build_absolute_uri(
-                f'/recipes/{pk}/'
+                reverse('recipes:recipe-short-link', kwargs={'pk': pk})
             )
         })
 

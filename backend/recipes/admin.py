@@ -94,23 +94,6 @@ class CookingTimeFilter(admin.SimpleListFilter):
             return queryset.filter(cooking_time__gt=60)
 
 
-class AuthorUsernameFilter(admin.SimpleListFilter):
-    """Фильтр по никам авторов"""
-    title = 'Автор'
-    parameter_name = 'author'
-
-    def lookups(self, request, model_admin):
-        """Возвращает список ников авторов"""
-        authors = User.objects.filter(recipes__isnull=False).distinct()
-        return [(author.username, author.username) for author in authors]
-
-    def queryset(self, request, queryset):
-        """Фильтрует по выбранному нику автора"""
-        if self.value():
-            return queryset.filter(author__username=self.value())
-        return queryset
-
-
 class ImagePreviewWidget(forms.FileInput):
     """Кастомный виджет для поля image"""
     def render(self, name, value, attrs=None, renderer=None):
@@ -145,7 +128,7 @@ class RecipeAdmin(admin.ModelAdmin):
     list_display_links = ('name',)
     search_fields = ('name', 'author__email', 'author__username')
     list_filter = ('tags', 'created_at',
-                   AuthorUsernameFilter, CookingTimeFilter)
+                   'author', CookingTimeFilter)
     filter_horizontal = ('tags',)
     inlines = (IngredientAmountInline,)
     ordering = ('-created_at',)
@@ -169,7 +152,7 @@ class RecipeAdmin(admin.ModelAdmin):
     @admin.display(description='Продукты')
     def get_ingredients_column(self, recipe):
         """Показывает список ингредиентов рецепта"""
-        ingredients = recipe.ingredient_amounts.all()[:5]
+        ingredients = recipe.ingredient_amounts.all()
         return mark_safe('<br>'.join([
             f'{ing.ingredient.name} '
             f'({ing.amount} {ing.ingredient.measurement_unit})'
@@ -193,8 +176,7 @@ class RecipeAdmin(admin.ModelAdmin):
     def get_tags_html(self, recipe):
         """Красивые теги"""
         return mark_safe(' '.join(
-            f'{tag.name}'
-            for tag in recipe.tags.all()
+            tag.name for tag in recipe.tags.all()
         ))
 
     @mark_safe
@@ -267,7 +249,7 @@ class UserAdmin(UserAdmin):
     @admin.display(description='ФИО')
     def get_full_name(self, user):
         """ФИО пользователя в одной колонке"""
-        return f"{user.last_name or ''} {user.first_name or ''}".strip()
+        return f'{user.last_name} {user.first_name}'.strip()
 
     @admin.display(description='Рецепты')
     def recipes_count(self, user):

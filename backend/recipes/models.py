@@ -11,14 +11,6 @@ USERNAME_VALIDATOR = RegexValidator(
     message='Имя пользователя содержит недопустимые символы'
 )
 
-VERBOSE_NAMES = {
-    'login': 'Логин',
-    'email': 'Email',
-    'first_name': 'Имя',
-    'last_name': 'Фамилия',
-    'avatar': 'Аватар',
-}
-
 
 class User(AbstractUser):
     """Модель пользователя с аватаром"""
@@ -26,30 +18,30 @@ class User(AbstractUser):
         max_length=150,
         unique=True,
         validators=[USERNAME_VALIDATOR],
-        verbose_name=VERBOSE_NAMES['login']
+        verbose_name='Логин'
     )
 
     email = models.EmailField(
         max_length=254,
         unique=True,
-        verbose_name=VERBOSE_NAMES['email']
+        verbose_name='Email'
     )
 
     first_name = models.CharField(
         max_length=150,
-        verbose_name=VERBOSE_NAMES['first_name']
+        verbose_name='Имя'
     )
 
     last_name = models.CharField(
         max_length=150,
-        verbose_name=VERBOSE_NAMES['last_name']
+        verbose_name='Фамилия'
     )
 
     avatar = models.ImageField(
         upload_to='users/avatars/',
         blank=True,
         null=True,
-        verbose_name=VERBOSE_NAMES['avatar']
+        verbose_name='Аватар'
     )
 
     USERNAME_FIELD = 'email'
@@ -220,7 +212,7 @@ class UserRecipeBaseModel(models.Model):
     user = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
-        related_name='%(class)s',
+        related_name='%(class)ss',
         verbose_name='Пользователь'
     )
     recipe = models.ForeignKey(
@@ -235,7 +227,7 @@ class UserRecipeBaseModel(models.Model):
         constraints = [
             models.UniqueConstraint(
                 fields=['user', 'recipe'],
-                name='unique_%(class)s'
+                name='unique_%(class)ss'
             )
         ]
 
