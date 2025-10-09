@@ -105,6 +105,10 @@ class RecipeViewSet(viewsets.ModelViewSet):
             return RecipeCreateUpdateSerializer
         return RecipeSerializer
 
+    def perform_create(self, serializer):
+        """Автоматически устанавливаем автора при создании"""
+        serializer.save(author=self.request.user)
+
     def create(self, request, *args, **kwargs):
         """Переопределяем create"""
         serializer = self.get_serializer(data=request.data)
@@ -124,10 +128,6 @@ class RecipeViewSet(viewsets.ModelViewSet):
         return Response(response_data,
                         status=status.HTTP_201_CREATED,
                         headers=headers)
-
-    def perform_create(self, serializer):
-        """Автоматически устанавливаем автора при создании"""
-        serializer.save(author=self.request.user)
 
     def _handle_recipe_action(self, request, pk, model_class):
         """Общий метод для добавления/удаления рецепта в избранное/корзину"""
@@ -216,9 +216,10 @@ class RecipeViewSet(viewsets.ModelViewSet):
         if not Recipe.objects.filter(id=pk).exists():
             raise Http404(f'Рецепт с id {pk} не найден')
 
-        short_link_url = reverse('recipes:recipe-short-link', args=[pk])
         return Response({
-            'short-link': request.build_absolute_uri(short_link_url)
+            'short-link': request.build_absolute_uri(
+                f'/recipes/{pk}/'
+            )
         })
 
 
@@ -234,7 +235,7 @@ class UserFoodgramViewSet(UserViewSet):
         """Список моих подписок"""
         user = request.user
         subscriptions = User.objects.filter(
-            following__user=user
+            followings__user=user
         )
 
         # Пагинация

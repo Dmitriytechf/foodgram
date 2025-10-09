@@ -10,12 +10,6 @@ class BaseImportCommand(BaseCommand):
     success_message = "Импорт завершен успешно"
 
     def handle(self, *args, **options):
-        if not self.file_path or not self.model:
-            self.stdout.write(self.style.ERROR(
-                'Не указан file_path или model в классе команды'
-            ))
-            return
-
         self.stdout.write(f'Пытаемся открыть файл: {self.file_path}')
 
         try:

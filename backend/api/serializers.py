@@ -166,7 +166,6 @@ class RecipeCreateUpdateSerializer(serializers.ModelSerializer):
 class UserSerializer(BaseUserSerializer):
     """Сериализатор для получения данных пользователя"""
     is_subscribed = serializers.SerializerMethodField()
-    avatar = serializers.ImageField(read_only=True)
 
     class Meta(BaseUserSerializer.Meta):
         model = User

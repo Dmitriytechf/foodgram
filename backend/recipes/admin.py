@@ -3,6 +3,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.admin import UserAdmin
 from django.db.models import Count
 from django.utils.safestring import mark_safe
+from django import forms
 
 from .models import (Favorite, Ingredient, IngredientAmount, Recipe,
                      ShoppingCart, Subscription, Tag)
@@ -13,12 +14,13 @@ User = get_user_model()
 class HasRecipesFilter(admin.SimpleListFilter):
     title = 'Есть в рецептах'
     parameter_name = 'has_recipes'
+    LOOKUP_CHOICES = (
+        ('yes', 'Да'),
+        ('no', 'Нет'),
+    )
 
     def lookups(self, request, model_admin):
-        return (
-            ('yes', 'Да'),
-            ('no', 'Нет'),
-        )
+        return self.LOOKUP_CHOICES
 
     def queryset(self, request, queryset):
         if self.value() == 'yes':
@@ -92,6 +94,41 @@ class CookingTimeFilter(admin.SimpleListFilter):
             return queryset.filter(cooking_time__gt=60)
 
 
+class AuthorUsernameFilter(admin.SimpleListFilter):
+    """Фильтр по никам авторов"""
+    title = 'Автор'
+    parameter_name = 'author'
+
+    def lookups(self, request, model_admin):
+        """Возвращает список ников авторов"""
+        authors = User.objects.filter(recipes__isnull=False).distinct()
+        return [(author.username, author.username) for author in authors]
+
+    def queryset(self, request, queryset):
+        """Фильтрует по выбранному нику автора"""
+        if self.value():
+            return queryset.filter(author__username=self.value())
+        return queryset
+
+
+class ImagePreviewWidget(forms.FileInput):
+    """Кастомный виджет для поля image"""
+    def render(self, name, value, attrs=None, renderer=None):
+        input_html = super().render(name, value, attrs, renderer)
+        preview_html = f'''
+            <div style="display: flex; align-items: center;">
+                <div>
+                    <img src="{value.url}" margin-bottom: 10px;
+                    style="max-height: 150px; max-width: 150px;">
+                </div>
+                <div>
+                    {input_html}
+                </div>
+            </div>
+        '''
+        return mark_safe(preview_html)
+
+
 @admin.register(Recipe)
 class RecipeAdmin(admin.ModelAdmin):
     """Админка рецептов"""
@@ -107,7 +144,8 @@ class RecipeAdmin(admin.ModelAdmin):
     )
     list_display_links = ('name',)
     search_fields = ('name', 'author__email', 'author__username')
-    list_filter = ('tags', 'created_at', 'author', CookingTimeFilter)
+    list_filter = ('tags', 'created_at',
+                   AuthorUsernameFilter, CookingTimeFilter)
     filter_horizontal = ('tags',)
     inlines = (IngredientAmountInline,)
     ordering = ('-created_at',)
@@ -122,10 +160,16 @@ class RecipeAdmin(admin.ModelAdmin):
         }),
     )
 
+    def get_form(self, request, obj=None, **kwargs):
+        """Используем кастомный виджет для поля image"""
+        form = super().get_form(request, obj, **kwargs)
+        form.base_fields['image'].widget = ImagePreviewWidget()
+        return form
+
     @admin.display(description='Продукты')
-    def get_ingredients_column(self, product):
+    def get_ingredients_column(self, recipe):
         """Показывает список ингредиентов рецепта"""
-        ingredients = product.ingredient_amounts.all()[:5]
+        ingredients = recipe.ingredient_amounts.all()[:5]
         return mark_safe('<br>'.join([
             f'{ing.ingredient.name} '
             f'({ing.amount} {ing.ingredient.measurement_unit})'
@@ -133,12 +177,12 @@ class RecipeAdmin(admin.ModelAdmin):
         ]))
 
     @admin.display(description='Автор')
-    def author_username(self, name):
-        return name.author.username
+    def author_username(self, recipe):
+        return recipe.author.username
 
     @admin.display(description='Время (мин)')
-    def cooking_time_min(self, value_min):
-        return value_min.cooking_time
+    def cooking_time_min(self, recipe):
+        return recipe.cooking_time
 
     @admin.display(description='В избранном')
     def favorites_count(self, recipe):
@@ -146,19 +190,19 @@ class RecipeAdmin(admin.ModelAdmin):
         return recipe.favorite.count()
 
     @admin.display(description='Теги')
-    def get_tags_html(self, tags_html):
+    def get_tags_html(self, recipe):
         """Красивые теги"""
         return mark_safe(' '.join(
             f'{tag.name}'
-            for tag in tags_html.tags.all()
+            for tag in recipe.tags.all()
         ))
 
     @mark_safe
     @admin.display(description='Изображения')
-    def get_image_html(self, image_html):
+    def get_image_html(self, recipe):
         """Миниатюра изображения"""
-        if image_html.image:
-            return f'<img src="{image_html.image.url}" style="height: 40px;">'
+        if recipe.image:
+            return f'<img src="{recipe.image.url}" style="height: 40px;">'
 
 
 @admin.register(Favorite, ShoppingCart)
@@ -169,8 +213,8 @@ class UserRecipeAdmin(admin.ModelAdmin):
     search_fields = ('user__email', 'user__username', 'recipe__name')
 
     @admin.display(description='Автор рецепта')
-    def recipe_author(self, recipe_author):
-        return recipe_author.recipe.author
+    def recipe_author(self, recipe_instance):
+        return recipe_instance.recipe.author
 
 
 @admin.register(Subscription)
@@ -185,39 +229,57 @@ class SubscriptionAdmin(admin.ModelAdmin):
 class UserAdmin(UserAdmin):
     """Кастомная админка для пользователей с поиском по email и username"""
     list_display = (
-        'id', 'username', 'email', 'recipes_count',
-        'following_count', 'followers_count',
-        'is_staff', 'get_avatar_html')
-    list_filter = ('is_staff', 'is_superuser', 'is_active', 'groups')
+        'id', 'username', 'get_full_name', 'email', 'recipes_count',
+        'following_count', 'followers_count', 'get_avatar_html')
+    list_filter = ('is_superuser', 'is_active', 'groups')
     search_fields = ('username', 'email', 'first_name', 'last_name')
     ordering = ('username',)
+    readonly_fields = ('avatar_preview',)
 
     def get_fieldsets(self, request, obj=None):
         fieldsets = super().get_fieldsets(request, obj)
-        fieldsets[1][1]['fields'] = fieldsets[1][1]['fields'] + ('avatar',)
+        if 'avatar' not in fieldsets[1][1]['fields']:
+            fieldsets[1][1]['fields'] = fieldsets[1][1]['fields'] + (
+                'avatar_preview', 'avatar'
+            )
         return fieldsets
 
     @mark_safe
-    @admin.display(description='Аватар')
-    def get_avatar_html(self, avatar_html):
-        """HTML-разметка для аватара"""
-        if avatar_html.avatar:
+    @admin.display(description='Текущий аватар')
+    def avatar_preview(self, obj):
+        """Превью аватара в форме редактирования"""
+        if obj.avatar:
             return (
-                f'<img src="{avatar_html.avatar.url}" style="max-height: 50px;'
+                f'<img src="{obj.avatar.url}" style="max-height: 150px;'
+                f'max-width: 150px; border-radius: 50%; object-fit: cover;"/>'
+            )
+
+    @mark_safe
+    @admin.display(description='Аватар')
+    def get_avatar_html(self, user):
+        """HTML-разметка для аватара"""
+        if user.avatar:
+            return (
+                f'<img src="{user.avatar.url}" style="max-height: 50px;'
                 f'max-width: 50px; border-radius: 50%; object-fit: cover;" />'
             )
 
+    @admin.display(description='ФИО')
+    def get_full_name(self, user):
+        """ФИО пользователя в одной колонке"""
+        return f"{user.last_name or ''} {user.first_name or ''}".strip()
+
     @admin.display(description='Рецепты')
-    def recipes_count(self, recipes_count):
+    def recipes_count(self, user):
         """Количество рецептов пользователя"""
-        return recipes_count.recipes.count()
+        return user.recipes.count()
 
     @admin.display(description='Подписки')
-    def following_count(self, following_count):
+    def following_count(self, user):
         """Количество подписок пользователя"""
-        return following_count.following.count()
+        return user.followings.count()
 
     @admin.display(description='Подписчики')
-    def followers_count(self, followers_count):
+    def followers_count(self, user):
         """Количество подписчиков пользователя"""
-        return followers_count.followers.count()
+        return user.followers.count()

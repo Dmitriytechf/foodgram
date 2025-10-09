@@ -5,7 +5,7 @@ from . import views
 app_name = 'recipes'
 
 urlpatterns = [
-    path('s/<int:pk>/',
+    path('r/<int:pk>/',
          views.recipe_short_link,
          name='recipe-short-link'),
 ]

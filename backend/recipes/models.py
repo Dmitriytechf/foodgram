@@ -1,7 +1,6 @@
 from django.contrib.auth.models import AbstractUser
 from django.core.validators import MinValueValidator, RegexValidator
 from django.db import models
-from django.utils.translation import gettext_lazy as _
 
 from .constants import MIN_AMOUNT, MIN_COOKING_TIME
 
@@ -12,6 +11,14 @@ USERNAME_VALIDATOR = RegexValidator(
     message='Имя пользователя содержит недопустимые символы'
 )
 
+VERBOSE_NAMES = {
+    'login': 'Логин',
+    'email': 'Email',
+    'first_name': 'Имя',
+    'last_name': 'Фамилия',
+    'avatar': 'Аватар',
+}
+
 
 class User(AbstractUser):
     """Модель пользователя с аватаром"""
@@ -19,30 +26,30 @@ class User(AbstractUser):
         max_length=150,
         unique=True,
         validators=[USERNAME_VALIDATOR],
-        verbose_name='Логин'
+        verbose_name=VERBOSE_NAMES['login']
     )
 
     email = models.EmailField(
         max_length=254,
         unique=True,
-        verbose_name=_('Email')
+        verbose_name=VERBOSE_NAMES['email']
     )
 
     first_name = models.CharField(
         max_length=150,
-        verbose_name='Имя'
+        verbose_name=VERBOSE_NAMES['first_name']
     )
 
     last_name = models.CharField(
         max_length=150,
-        verbose_name='Фамилия'
+        verbose_name=VERBOSE_NAMES['last_name']
     )
 
     avatar = models.ImageField(
         upload_to='users/avatars/',
         blank=True,
         null=True,
-        verbose_name='Аватар'
+        verbose_name=VERBOSE_NAMES['avatar']
     )
 
     USERNAME_FIELD = 'email'
@@ -70,7 +77,7 @@ class Subscription(models.Model):
     author = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
-        related_name='following',
+        related_name='followings',
         verbose_name='Автор'
     )
 
@@ -213,12 +220,14 @@ class UserRecipeBaseModel(models.Model):
     user = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
-        related_name='%(class)s'
+        related_name='%(class)s',
+        verbose_name='Пользователь'
     )
     recipe = models.ForeignKey(
         Recipe,
         on_delete=models.CASCADE,
-        related_name='%(class)s'
+        related_name='%(class)s',
+        verbose_name='Рецепт'
     )
 
     class Meta:
