@@ -7,7 +7,7 @@ RUSSIAN_MONTHS = {
     9: 'сентября', 10: 'октября', 11: 'ноября', 12: 'декабря'
 }
 
-INGREDIENT_FORMAT = "{idx}. {name} - {total_amount} {unit:2.2}"
+INGREDIENT_FORMAT = "{idx}. {name} - {total_amount} ({unit})"
 RECIPE_FORMAT = "{idx}. {name} (автор: @{author})"
 SEPARATOR = '-' * 50
 
