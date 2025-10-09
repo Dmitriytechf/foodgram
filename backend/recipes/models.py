@@ -212,7 +212,7 @@ class UserRecipeBaseModel(models.Model):
     user = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
-        related_name='%(class)ss',
+        related_name='%(class)s',
         verbose_name='Пользователь'
     )
     recipe = models.ForeignKey(
@@ -227,7 +227,7 @@ class UserRecipeBaseModel(models.Model):
         constraints = [
             models.UniqueConstraint(
                 fields=['user', 'recipe'],
-                name='unique_%(class)ss'
+                name='unique_%(class)s'
             )
         ]
 

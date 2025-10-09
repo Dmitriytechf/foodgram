@@ -112,6 +112,24 @@ class ImagePreviewWidget(forms.FileInput):
         return mark_safe(preview_html)
 
 
+
+class AuthorUsernameFilter(admin.SimpleListFilter):
+    """Фильтр по никам авторов"""
+    title = 'Автор'
+    parameter_name = 'author'
+
+    def lookups(self, request, model_admin):
+        """Возвращает список ников авторов"""
+        authors = User.objects.filter(recipes__isnull=False).distinct()
+        return [(author.username, author.username) for author in authors]
+
+    def queryset(self, request, queryset):
+        """Фильтрует по выбранному нику автора"""
+        if self.value():
+            return queryset.filter(author__username=self.value())
+        return queryset
+
+
 @admin.register(Recipe)
 class RecipeAdmin(admin.ModelAdmin):
     """Админка рецептов"""
@@ -128,7 +146,7 @@ class RecipeAdmin(admin.ModelAdmin):
     list_display_links = ('name',)
     search_fields = ('name', 'author__email', 'author__username')
     list_filter = ('tags', 'created_at',
-                   'author', CookingTimeFilter)
+                   AuthorUsernameFilter, CookingTimeFilter)
     filter_horizontal = ('tags',)
     inlines = (IngredientAmountInline,)
     ordering = ('-created_at',)
