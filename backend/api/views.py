@@ -129,6 +129,27 @@ class RecipeViewSet(viewsets.ModelViewSet):
                         status=status.HTTP_201_CREATED,
                         headers=headers)
 
+    def update(self, request, *args, **kwargs):
+        """Переопределяем update"""
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+        serializer = self.get_serializer(instance,
+                                         data=request.data,
+                                         partial=partial)
+        serializer.is_valid(raise_exception=True)
+        instance = serializer.save()
+
+        output_serializer = RecipeSerializer(instance,
+                                             context={'request': request})
+
+        response_data = output_serializer.data
+        response_data['_redirect'] = {
+            'required': True,
+            'url': '/api/recipes/'
+        }
+
+        return Response(response_data, status=status.HTTP_200_OK)
+
     def _handle_recipe_action(self, request, pk, model_class):
         """Общий метод для добавления/удаления рецепта в избранное/корзину"""
         if request.method == 'DELETE':

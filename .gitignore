@@ -11,6 +11,7 @@ __pycache__/
 *.so
 dock.txt
 help.txt
+struct.txt
 
 # Distribution / packaging
 .Python

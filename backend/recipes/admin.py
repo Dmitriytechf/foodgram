@@ -112,7 +112,6 @@ class ImagePreviewWidget(forms.FileInput):
         return mark_safe(preview_html)
 
 
-
 class AuthorUsernameFilter(admin.SimpleListFilter):
     """Фильтр по никам авторов"""
     title = 'Автор'

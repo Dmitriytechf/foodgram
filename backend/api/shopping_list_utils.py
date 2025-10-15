@@ -11,8 +11,10 @@ UNIT_FORMS = {
     'стакан': {'one': 'стакан', 'few': 'стакана', 'many': 'стаканов'},
     'грамм': {'one': 'грамм', 'few': 'грамма', 'many': 'граммов'},
     'ложка': {'one': 'ложка', 'few': 'ложки', 'many': 'ложек'},
-    'столовая ложка': {'one': 'столовая ложка', 'few': 'столовые ложки', 'many': 'столовых ложек'},
-    'чайная ложка': {'one': 'чайная ложка', 'few': 'чайные ложки', 'many': 'чайных ложек'},
+    'столовая ложка': {'one': 'столовая ложка', 'few': 'столовые ложки',
+                       'many': 'столовых ложек'},
+    'чайная ложка': {'one': 'чайная ложка', 'few': 'чайные ложки',
+                     'many': 'чайных ложек'},
     'штука': {'one': 'штука', 'few': 'штуки', 'many': 'штук'},
     'зубчик': {'one': 'зубчик', 'few': 'зубчика', 'many': 'зубчиков'},
     'пучок': {'one': 'пучок', 'few': 'пучка', 'many': 'пучков'},
@@ -37,8 +39,8 @@ def get_correct_unit_form(amount, unit):
         return UNIT_FORMS[unit]['many']
 
 
-INGREDIENT_FORMAT = "{idx}. {name} - {total_amount} {unit}"
-RECIPE_FORMAT = "{idx}. {name} (автор: @{author})"
+INGREDIENT_FORMAT = "📌 {idx}. {name} - {total_amount} {unit}"
+RECIPE_FORMAT = "🍽️ {idx}. {name} (автор: @{author})"
 SEPARATOR = '-' * 50
 
 
@@ -50,10 +52,10 @@ def generate_shopping_list_content(ingredients, recipes):
     year = current_date.year
 
     return '\n'.join([
-        'Foodgram - Список покупок',
-        f'Дата составления: {day} {month} {year}',
         SEPARATOR,
-        '',
+        '🛒 Foodgram - Список покупок',
+        f'📅 Дата составления: {day} {month} {year}',
+        SEPARATOR,
         'Ингредиенты:',
         *[
             INGREDIENT_FORMAT.format(
@@ -64,9 +66,7 @@ def generate_shopping_list_content(ingredients, recipes):
             )
             for idx, item in enumerate(ingredients, 1)
         ],
-        '',
         SEPARATOR,
-        '',
         'Рецепты:',
         *[
             RECIPE_FORMAT.format(
@@ -76,9 +76,8 @@ def generate_shopping_list_content(ingredients, recipes):
             )
             for idx, recipe in enumerate(recipes, 1)
         ],
-        '',
         SEPARATOR,
-        f'Всего ингредиентов: {len(ingredients)}',
-        f'Всего рецептов: {len(recipes)}',
+        f'\nВсего ингредиентов: {len(ingredients)}',
+        f'Всего рецептов: {len(recipes)}\n',
         SEPARATOR
     ])
