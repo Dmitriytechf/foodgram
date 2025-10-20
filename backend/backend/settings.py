@@ -15,6 +15,10 @@ ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '').split(',')
 AUTH_USER_MODEL = 'recipes.User'
 
 INSTALLED_APPS = [
+    # admin
+    'unfold',
+    'unfold.contrib.forms',
+
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -31,6 +35,16 @@ INSTALLED_APPS = [
     'recipes',
     'api',
 ]
+
+UNFOLD = {
+    "SITE_TITLE": "Foodgram Admin",
+    "SITE_HEADER": "🍳 Foodgram",
+    "SITE_URL": "/",
+    "THEME": "dark",
+    "COLOR_SCHEME": "purple",
+    "SHOW_VIEW_ON_SITE": True,
+}
+
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
