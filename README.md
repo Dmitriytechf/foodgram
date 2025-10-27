@@ -25,6 +25,7 @@
 ### **Главная страница**
 <img width="1155" height="921" alt="Снимок экрана 2025-10-27 171135" src="https://github.com/user-attachments/assets/87dd93e2-29f5-4c6a-a009-c706ee692af6" />
 <img width="1190" height="926" alt="Снимок экрана 2025-10-27 171156" src="https://github.com/user-attachments/assets/7cac2d7d-8c87-4504-9f3c-ddb285e1f88b" />
+<img width="1373" height="927" alt="image" src="https://github.com/user-attachments/assets/0889df18-5251-44aa-b02f-c8513142289e" />
 
 ### **Подписки**
 <img width="1268" height="912" alt="Снимок экрана 2025-10-27 171409" src="https://github.com/user-attachments/assets/8d5b3d10-b167-45a3-b60f-504b3fa47e10" />
