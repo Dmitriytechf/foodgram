@@ -33,6 +33,9 @@
 ### **Избранное**
 <img width="1331" height="916" alt="image" src="https://github.com/user-attachments/assets/3e73f66e-03c1-45b8-aa57-b3b08e3f9d3d" />
 
+### **Список покупок**
+<img width="1373" height="927" alt="image" src="https://github.com/user-attachments/assets/ae0fbc17-8145-43d9-92b8-8f096303aef4" />
+
 
 ## Установка и развертывание
 
