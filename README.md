@@ -13,6 +13,25 @@
 - **Контейнеризация**: Docker
 - **Веб-сервер**: Nginx
 
+## Внешний вид сайта
+**Админка**
+![photo_2025-10-15_15-30-44](https://github.com/user-attachments/assets/aefd3859-74fc-4bc0-9fa8-53de035f4bf4)
+![photo_2025-10-15_15-30-44 (2)](https://github.com/user-attachments/assets/39335f12-1e7b-41a8-a030-c531849f4f5c)
+
+**Регистрация**
+![photo_2025-10-11_10-36-07](https://github.com/user-attachments/assets/364f6044-92a9-40e8-8287-5c0517fafa54)
+
+**Главная страница**
+<img width="1155" height="921" alt="image" src="https://github.com/user-attachments/assets/064b0143-861d-4247-ac01-96d695731eb8" />
+<img width="1396" height="933" alt="image" src="https://github.com/user-attachments/assets/c1416b51-0d67-47bf-b9cf-0bd932e39b7e" />
+
+**Подписки**
+<img width="1268" height="912" alt="image" src="https://github.com/user-attachments/assets/e9c14a92-3fc6-4aa3-a6d4-1dbbf89fd757" />
+
+**Избранное**
+<img width="1331" height="916" alt="image" src="https://github.com/user-attachments/assets/3e73f66e-03c1-45b8-aa57-b3b08e3f9d3d" />
+
+
 ## Установка и развертывание
 
 1. Клонируйте репозиторий:
