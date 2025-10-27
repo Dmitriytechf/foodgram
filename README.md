@@ -14,22 +14,22 @@
 - **Веб-сервер**: Nginx
 
 ## Внешний вид сайта
-**Админка**
+
+### **Админка**
 ![photo_2025-10-15_15-30-44](https://github.com/user-attachments/assets/aefd3859-74fc-4bc0-9fa8-53de035f4bf4)
 ![photo_2025-10-15_15-30-44 (2)](https://github.com/user-attachments/assets/39335f12-1e7b-41a8-a030-c531849f4f5c)
 
-**Регистрация**
+### **Регистрация**
 ![photo_2025-10-11_10-36-07](https://github.com/user-attachments/assets/364f6044-92a9-40e8-8287-5c0517fafa54)
 
-**Главная страница**
+### **Главная страница**
 <img width="1155" height="921" alt="Снимок экрана 2025-10-27 171135" src="https://github.com/user-attachments/assets/87dd93e2-29f5-4c6a-a009-c706ee692af6" />
 <img width="1190" height="926" alt="Снимок экрана 2025-10-27 171156" src="https://github.com/user-attachments/assets/7cac2d7d-8c87-4504-9f3c-ddb285e1f88b" />
 
-
-**Подписки**
+### **Подписки**
 <img width="1268" height="912" alt="Снимок экрана 2025-10-27 171409" src="https://github.com/user-attachments/assets/8d5b3d10-b167-45a3-b60f-504b3fa47e10" />
 
-**Избранное**
+### **Избранное**
 <img width="1331" height="916" alt="image" src="https://github.com/user-attachments/assets/3e73f66e-03c1-45b8-aa57-b3b08e3f9d3d" />
 
 
